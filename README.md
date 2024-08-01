@@ -1,7 +1,7 @@
 # Catan AI Agent - CS 4100
 ### Group Members: Andrew Dykstra, Anne Crinnion, and Charles Zhao
 
-The current version V0.1 is using Q-learning with a neural network to approximate Q-values. There's more description below of what's implemented so far and what still needs to be added.
+The current version V1.0.2 has a game environment developed. There's more description below of what's implemented so far and what still needs to be added.
 
 ## Libraries Needed
 pip instal the following libraries
