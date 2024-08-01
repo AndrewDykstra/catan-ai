@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.4] - 2024-08-01
+### Added
+- N/A
+
+### Changed
+- N/A
+
+### Fixed
+- Formatting of ReadME
+
 ## [1.0.3] - 2024-08-01
 ### Added
 - Adding to README: feedback from check-in meeting + discussion

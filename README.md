@@ -31,6 +31,6 @@ pip instal the following libraries
 - [ ] Every turn -1
 
 ### Feedback
-Train against a bot with set rules then once it's compotent against other versions of itself
-Actions to add: Trading with bank, trade 4 of same resource for 1 of your choice, then ports could be 3-1 and specialized is 2-1 for a port
-Future: Add robber, specialized cards
+Train against a bot with set rules then once it's compotent against other versions of itself   
+Actions to add: Trading with bank, trade 4 of same resource for 1 of your choice, then ports could be 3-1 and specialized is 2-1 for a port   
+Future: Add robber, specialized cards   
