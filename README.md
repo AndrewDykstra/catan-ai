@@ -20,3 +20,17 @@ pip instal the following libraries
 - [ ] Resource Management: Resource management is very simplistic so we need to implement this based on our decision tree.
 - [ ] Opponent AI: Decide on how we want our opponents to interact with the game. They could be clones or they could have set rules.
 - [ ] Evaluation: Ideally implement a way to track how our AI Agent is performing in the game.
+
+## Feedback from Check-in + Discussion
+### What to reward the Agent for:
+- [ ] Earning a Victory Point
+- [ ] Winning the game
+
+### What to Penalize the Agent for
+- [ ] Attempting to make moves that aren't possible/doesn't have the resources for
+- [ ] Every turn -1
+
+### Feedback
+Train against a bot with set rules then once it's compotent against other versions of itself
+Actions to add: Trading with bank, trade 4 of same resource for 1 of your choice, then ports could be 3-1 and specialized is 2-1 for a port
+Future: Add robber, specialized cards

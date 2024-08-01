@@ -34,6 +34,7 @@ class CatanEnv(gym.Env):
         return state, reward, self.done, info
 
     # This will generate a board with resources tiles and numbers randomly to ensure new boards each game
+    # TODO: Use the same board upon first iterations of training
     def initialize_board(self):
         board = {
             'tiles': ['wood', 'brick', 'wheat', 'sheep', 'ore'] * 3,
@@ -58,6 +59,7 @@ class CatanEnv(gym.Env):
 
     # This will make the game environment execute actions that the AI agent makes
     # TODO: Finish the implementation of the different actions the AI can make
+    # Trading with bank, no move this turn?, etc...
     def perform_action(self, action):
         player = self.players[self.current_player]
         reward = 0
@@ -74,7 +76,7 @@ class CatanEnv(gym.Env):
             player['resources']['wood'] -= 1
             player['resources']['brick'] -= 1
             player['roads'].append('new_road')
-            return 1  # Reward for building a road
+            return 1  # Placeholder for rewarding agent or not
         return -1  # If unable to build it will return -1 so the agent learns not to attempt this action without proper resources
 
     # This will build a settlement and handle removing resources the player will use, rewards or penalizes agent
