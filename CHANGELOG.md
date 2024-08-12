@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.6] - 2024-08-12
+### Added
+- Finding the best starting settlement placements
+
+### Changed
+- N/A
+
+### Fixed
+- N/A
+
 ## [1.0.5] - 2024-08-12
 ### Added
 - Trading with the Bank (More actions added)
