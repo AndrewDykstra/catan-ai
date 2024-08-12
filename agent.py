@@ -88,7 +88,11 @@ class RuleBasedAgent:
             return 0  # Build a road
         if wood > 0 and brick > 0 and wheat > 0 and sheep > 0:
             return 1  # Build a settlement
-        return random.choice([i for i in range(2, 22)])  # Trade with bank randomly
+        
+        options = [i for i in range(2, 23)]
+        weights = [1] * len(options)
+        weights[22 - 2] = 20
+        return random.choices(options, weights=weights)  # Trade with bank randomly
 
 def train_agent(env, agent, rule_based_agents, episodes=1000):
     for e in range(episodes):

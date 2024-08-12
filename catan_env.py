@@ -6,25 +6,29 @@ import random
 class CatanEnv(gym.Env):
     def __init__(self):
         super(CatanEnv, self).__init__()
-        self.action_space = spaces.Discrete(22) # Number of possible/valid actions
+        self.action_space = spaces.Discrete(23) # Number of possible/valid actions
         self.observation_space = spaces.Box(low=0, high=1, shape=(165,), dtype=np.float32) 
 
         # Initialize game state
         self.reset()
+
+    def nextTurn(self):
+        # Increment current player
+        self.current_player = (self.current_player + 1) % len(self.players)
+        print (f'\nIt is Player {self.current_player + 1}\'s turn.')
+
+        # Roll dice and distribute resources
+        rolled_number = self.roll_dice()
+        print (f'Player {self.current_player + 1} rolled a {rolled_number}! Distributing Resources...')
+        self.distribute_resources(rolled_number)
+
+        return 0
 
     def step(self, action):
         reward = 0
         if not self.done:
             # Perform the chosen action
             reward = self.perform_action(action)
-
-            # Roll dice and distribute resources
-            rolled_number = self.roll_dice()
-            self.distribute_resources(rolled_number)
-
-            # Move to the next player if the game is not done
-            if not self.done:
-                self.current_player = (self.current_player + 1) % len(self.players)
 
         state = self.get_state()
         info = {}
@@ -49,9 +53,11 @@ class CatanEnv(gym.Env):
     def reset(self):
         self.board = self.initialize_board()
         self.players = self.initialize_players()
-        self.current_player = 0
         self.done = False
         self.set_starting_positions()
+        
+        self.current_player = -1
+        self.nextTurn()
 
         return self.get_state()
 
@@ -140,9 +146,13 @@ class CatanEnv(gym.Env):
             reward = self.build_road(player)
         elif action == 1:  # Build a settlement
             reward = self.build_settlement(player)
-        else:  # Trade with bank
+        elif action <= 21:  # Trade with bank
             give, receive = self.map_action_to_trade(action)
             reward = self.trade_with_bank(player, give, receive)
+        elif action == 22:
+            reward = self.nextTurn()
+        else:
+            raise Exception('Unknown Action ID')
 
         # Check if the player has enough resources:
         if reward == -1 and player['resources']['wood'] >= 4 and player['resources']['brick'] >= 4:
