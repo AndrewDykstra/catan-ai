@@ -2,6 +2,16 @@
 
 ## [1.0.5] - 2024-08-12
 ### Added
+- Rules around building a road and settlement in valid locations
+
+### Changed
+- N/A
+
+### Fixed
+- Formatting of ChangeLog
+
+## [1.0.5] - 2024-08-11
+### Added
 - Trading with the Bank (More actions added)
 - Agent with Q-Learning implemented
 - Implemented set starting locations
