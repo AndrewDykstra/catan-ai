@@ -54,8 +54,10 @@ class CatanAgent:
             state = torch.FloatTensor(state).unsqueeze(0)
             next_state = torch.FloatTensor(next_state).unsqueeze(0)
             target = reward
+
             if not done:
-                target = reward + self.gamma * torch.max(self.model(next_state)).item()
+                target += self.gamma * torch.max(self.model(next_state)).item()
+
             target_f = self.model(state).clone()
             target_f[0][action] = target
             output = self.model(state)
@@ -88,7 +90,12 @@ class RuleBasedAgent:
             return 0  # Build a road
         if wood > 0 and brick > 0 and wheat > 0 and sheep > 0:
             return 1  # Build a settlement
-        return random.choice([i for i in range(2, 22)])  # Trade with bank randomly
+
+        # If no valid moves, choose to pass the turn
+        if wood == 0 or brick == 0:
+            return 2  # Pass the turn
+
+        return random.choice([i for i in range(3, 23)])  # Trade with bank randomly
 
 def train_agent(env, agent, rule_based_agents, episodes=1000):
     for e in range(episodes):

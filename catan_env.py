@@ -6,8 +6,11 @@ import random
 class CatanEnv(gym.Env):
     def __init__(self):
         super(CatanEnv, self).__init__()
-        self.action_space = spaces.Discrete(22) # Number of possible/valid actions
-        self.observation_space = spaces.Box(low=0, high=1, shape=(165,), dtype=np.float32) 
+        self.num_players = 4
+        self.current_player = 0
+
+        self.action_space = spaces.Discrete(23)  # Number of possible/valid actions
+        self.observation_space = spaces.Box(low=0, high=1, shape=(165,), dtype=np.float32)
 
         # Initialize game state
         self.reset()
@@ -22,13 +25,8 @@ class CatanEnv(gym.Env):
             rolled_number = self.roll_dice()
             self.distribute_resources(rolled_number)
 
-            # Move to the next player if the game is not done
-            if not self.done:
-                self.current_player = (self.current_player + 1) % len(self.players)
-
         state = self.get_state()
         info = {}
-        
         return state, reward, self.done, info
 
     def roll_dice(self):
@@ -69,15 +67,20 @@ class CatanEnv(gym.Env):
             self.place_road(player, position['road'])
 
     def place_settlement(self, player, position):
+        if not self.is_valid_settlement_position(player, position):
+            return -1  # Invalid position
         player['settlements'].append(position)
         self.update_resources(player, position)
+        return 50  # Reward for valid settlement
 
     def place_road(self, player, position):
+        if not self.is_valid_road_position(player, position):
+            return -1  # Invalid position
         player['roads'].append(position)
+        return 10  # Reward for valid road
 
     def update_resources(self, player, position):
         adjacent_tiles = self.get_adjacent_tiles(position)
-
         for tile in adjacent_tiles:
             resource_type = tile['resource']
             if resource_type != 'barren':
@@ -136,65 +139,137 @@ class CatanEnv(gym.Env):
     def perform_action(self, action):
         player = self.players[self.current_player]
         reward = 0
+        valid_action = True
+
         if action == 0:  # Build a road
             reward = self.build_road(player)
         elif action == 1:  # Build a settlement
             reward = self.build_settlement(player)
+        elif action == 2:  # Pass to next player
+            reward = self.pass_turn(player)
         else:  # Trade with bank
             give, receive = self.map_action_to_trade(action)
             reward = self.trade_with_bank(player, give, receive)
 
-        # Check if the player has enough resources:
-        if reward == -1 and player['resources']['wood'] >= 4 and player['resources']['brick'] >= 4:
-            # Encourage agent to trade if it has enough resources to trade but not to build
-            reward += 5
-        
+        if reward == -1:  # Penalty for attempting an invalid action
+            reward = -0.1
+            valid_action = False
+
+        if valid_action:  # If action is valid, move on to next player
+            self.current_player = (self.current_player + 1) % len(self.players)
+        else:  # Check if there are no more valid actions
+            if not self.has_valid_moves(player):
+                self.current_player = (self.current_player + 1) % len(self.players)
+
+        # Check if the game is done after each action
+        self.done = self.check_done()
+
         return reward
 
+    def pass_turn(self, player):
+        self.current_player = (self.current_player + 1) % self.num_players  # Move on to next player
+        return 1  # Encourage passing turn but not as much as building
+
+    def has_valid_moves(self, player):
+        if self.can_build_road(player):  # Check for valid road
+            return True
+        if self.can_build_settlement(player):  # Check for valid settlement
+            return True
+        for action in range(3, 23):  # Check for valid trades with the bank (adjusted to start from 3)
+            give, receive = self.map_action_to_trade(action)
+            if give is not None and self.can_trade_with_bank(player, give):
+                return True
+        return False
+
+
+    def can_build_road(self, player):
+        return player['resources']['wood'] > 0 and player['resources']['brick'] > 0
+
+    def can_build_settlement(self, player):
+        return (player['resources']['wood'] > 0 and 
+                player['resources']['brick'] > 0 and 
+                player['resources']['wheat'] > 0 and 
+                player['resources']['sheep'] > 0)
+
+    def can_trade_with_bank(self, player, give):
+        return player['resources'][give] >= 4
 
     def map_action_to_trade(self, action):
-        if 2 <= action <= 5:  # Trade wood
+        if 3 <= action <= 6:  # Trade wood
             give = 'wood'
-            receive = ['brick', 'wheat', 'sheep', 'ore'][action - 2]
-        elif 6 <= action <= 9:  # Trade brick
+            receive = ['brick', 'wheat', 'sheep', 'ore'][action - 3]
+        elif 7 <= action <= 10:  # Trade brick
             give = 'brick'
-            receive = ['wood', 'wheat', 'sheep', 'ore'][action - 6]
-        elif 10 <= action <= 13:  # Trade wheat
+            receive = ['wood', 'wheat', 'sheep', 'ore'][action - 7]
+        elif 11 <= action <= 14:  # Trade wheat
             give = 'wheat'
-            receive = ['wood', 'brick', 'sheep', 'ore'][action - 10]
-        elif 14 <= action <= 17:  # Trade sheep
+            receive = ['wood', 'brick', 'sheep', 'ore'][action - 11]
+        elif 15 <= action <= 18:  # Trade sheep
             give = 'sheep'
-            receive = ['wood', 'brick', 'wheat', 'ore'][action - 14]
-        elif 18 <= action <= 21:  # Trade ore
+            receive = ['wood', 'brick', 'wheat', 'ore'][action - 15]
+        elif 19 <= action <= 22:  # Trade ore
             give = 'ore'
-            receive = ['wood', 'brick', 'wheat', 'sheep'][action - 18]
+            receive = ['wood', 'brick', 'wheat', 'sheep'][action - 19]
+        else:
+            give = None
+            receive = None
         return give, receive
 
+
+
     def trade_with_bank(self, player, give, receive):
+        if give is None or receive is None:
+            return -1  # Invalid trade action
+
         if player['resources'][give] >= 4:
             player['resources'][give] -= 4
             player['resources'][receive] += 1
             return 5  # Reward for successful trade
         return -1  # Penalty for insufficient resources to trade
 
+
     def build_road(self, player):
+        # Road must be connected to an existing road or settlement
         if player['resources']['wood'] > 0 and player['resources']['brick'] > 0:
-            player['resources']['wood'] -= 1
-            player['resources']['brick'] -= 1
-            player['roads'].append('new_road')
-            return 10  # Reward for building a road
+            for road in player['roads']:
+                if self.is_valid_road_position(player, road):
+                    player['resources']['wood'] -= 1
+                    player['resources']['brick'] -= 1
+                    player['roads'].append(road)
+                    return 10  # Reward for building a road
         return -1
 
     def build_settlement(self, player):
+        # Settlement must be connected to one of the player's roads and not adjacent to another settlement
         if player['resources']['wood'] > 0 and player['resources']['brick'] > 0 and player['resources']['wheat'] > 0 and player['resources']['sheep'] > 0:
-            player['resources']['wood'] -= 1
-            player['resources']['brick'] -= 1
-            player['resources']['wheat'] -= 1
-            player['resources']['sheep'] -= 1
-            player['settlements'].append('new_settlement')
-            player['victory_points'] += 1
-            return 50  # Reward for building a settlement
+            for road in player['roads']:
+                if self.is_valid_settlement_position(player, road):
+                    player['resources']['wood'] -= 1
+                    player['resources']['brick'] -= 1
+                    player['resources']['wheat'] -= 1
+                    player['resources']['sheep'] -= 1
+                    player['settlements'].append(road)
+                    player['victory_points'] += 1
+                    return 50  # Reward for building a settlement
         return -1
+
+    def is_valid_road_position(self, player, position):
+        # Road must be connected to an existing road or settlement
+        for settlement in player['settlements']:
+            if self.is_adjacent(settlement, position):
+                return True
+        for road in player['roads']:
+            if self.is_adjacent(road, position):
+                return True
+        return False
+
+    def is_valid_settlement_position(self, player, position):
+        # Settlement must not be adjacent to another settlement and must be connected to a road
+        if any(self.is_adjacent(settlement, position) for settlement in player['settlements']):
+            return False
+        if any(self.is_adjacent(road, position) for road in player['roads']):
+            return True
+        return False
 
     def get_state(self):
         state = []
@@ -236,7 +311,7 @@ class CatanEnv(gym.Env):
                 return True
         return False
 
-# This will test environment creation
+# Test the environment with the new action logic
 env = CatanEnv()
 state = env.reset()
 print("Initial state:", state)
