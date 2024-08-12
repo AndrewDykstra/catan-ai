@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.0.5] - 2024-08-12
+### Added
+- Trading with the Bank (More actions added)
+- Agent with Q-Learning implemented
+- Implemented set starting locations
+- Adjacency logic
+- BUG: Need to debug changing turns between players
+
+### Changed
+- N/A
+
+### Fixed
+- Formatting of ReadME
+
 ## [1.0.4] - 2024-08-01
 ### Added
 - N/A
