@@ -1,6 +1,17 @@
 # Changelog
 
-## [1.0.5] - 2024-08-12
+## [1.0.7] - 2024-08-12
+### Added
+- Logging around dice rolls to ensure players are getting resources
+- (Currently having an error where users aren't getting resources from dice rolls)
+
+### Changed
+- N/A
+
+### Fixed
+- N/A
+
+## [1.0.6] - 2024-08-12
 ### Added
 - Rules around building a road and settlement in valid locations
 
@@ -62,7 +73,7 @@
 - Formatting of README file
 
 ### Fixed
-- N/A\
+- N/A
 
 ## [1.0.0] - 2024-08-01
 ### Added

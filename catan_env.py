@@ -23,6 +23,7 @@ class CatanEnv(gym.Env):
 
             # Roll dice and distribute resources
             rolled_number = self.roll_dice()
+            print(f"Dice rolled: {rolled_number}")
             self.distribute_resources(rolled_number)
 
         state = self.get_state()
@@ -43,6 +44,7 @@ class CatanEnv(gym.Env):
                             if resource != 'barren':
                                 player['resources'][resource] += 1
                                 print(f"Player {player_index + 1} receives 1 {resource} from tile at {tile_position}.")
+        self.print_player_resources()  # Debugging: print resources after distribution
 
     def reset(self):
         self.board = self.initialize_board()
@@ -106,6 +108,8 @@ class CatanEnv(gym.Env):
             (tile_position[0] - 1, tile_position[1] - 1),  # Up-Left
             (tile_position[0] + 1, tile_position[1] + 1)   # Down-Right
         ]
+        if position in adjacent_positions:
+            print(f"Position {position} is adjacent to tile at {tile_position}")
         return position in adjacent_positions
 
     def get_adjacent_tiles(self, position):
@@ -181,7 +185,6 @@ class CatanEnv(gym.Env):
                 return True
         return False
 
-
     def can_build_road(self, player):
         return player['resources']['wood'] > 0 and player['resources']['brick'] > 0
 
@@ -215,8 +218,6 @@ class CatanEnv(gym.Env):
             receive = None
         return give, receive
 
-
-
     def trade_with_bank(self, player, give, receive):
         if give is None or receive is None:
             return -1  # Invalid trade action
@@ -226,7 +227,6 @@ class CatanEnv(gym.Env):
             player['resources'][receive] += 1
             return 5  # Reward for successful trade
         return -1  # Penalty for insufficient resources to trade
-
 
     def build_road(self, player):
         # Road must be connected to an existing road or settlement
@@ -311,14 +311,20 @@ class CatanEnv(gym.Env):
                 return True
         return False
 
+    def print_player_resources(self):
+        """Print the resources of each player for debugging purposes."""
+        for i, player in enumerate(self.players):
+            print(f"Player {i + 1} resources: {player['resources']}")
+
 # Test the environment with the new action logic
 env = CatanEnv()
 state = env.reset()
 print("Initial state:", state)
 
-for _ in range(10):
+for _ in range(1000):
     action = env.action_space.sample()
     state, reward, done, info = env.step(action)
     print("Action:", action, "State:", state, "Reward:", reward, "Done:", done)
     if done:
+        print("Game completed.")
         break
