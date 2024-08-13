@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.8] - 2024-08-12
+### Added
+- Added manual definitions of neighbors for every tile object
+
+### Changed
+- Reworked how the map is made entirely, now tiles are individual objects
+
+### Fixed
+- Players now gain resources upon each dice roll if they have settlements adjacent to the according tiles
+
 ## [1.0.7] - 2024-08-12
 ### Added
 - Logging around dice rolls to ensure players are getting resources

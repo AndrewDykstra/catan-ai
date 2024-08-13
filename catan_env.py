@@ -3,6 +3,33 @@ from gym import spaces
 import numpy as np
 import random
 
+class HexTile:
+    def __init__(self, resource, number):
+        self.resource = resource  # Type of resource
+        self.number = number  # Number index associated with the tile
+        self.neighbors = []  # List of neighboring hextile objects
+
+    def add_neighbor(self, neighbor_tile):
+        if neighbor_tile not in self.neighbors:
+            self.neighbors.append(neighbor_tile)
+            neighbor_tile.neighbors.append(self)  # Ensure bidirectional link between tiles
+
+    def __repr__(self):
+        return f"HexTile(resource={self.resource}, number={self.number})"
+
+class Settlement:
+    def __init__(self, tile1, tile2, tile3):
+        self.tiles = [tile1, tile2, tile3]
+    
+    def get_resources(self, rolled_number):
+        resources = {}
+        for tile in self.tiles:
+            if tile.number == rolled_number and tile.resource != 'barren':
+                if tile.resource not in resources:
+                    resources[tile.resource] = 0
+                resources[tile.resource] += 1
+        return resources
+
 class CatanEnv(gym.Env):
     def __init__(self):
         super(CatanEnv, self).__init__()
@@ -34,16 +61,12 @@ class CatanEnv(gym.Env):
         return random.randint(1, 6) + random.randint(1, 6)
 
     def distribute_resources(self, rolled_number):
-        for i, number in enumerate(self.board['numbers']):
-            if number == rolled_number:
-                tile_position = self.get_tile_position(i)
-                for player_index, player in enumerate(self.players):
-                    for settlement in player['settlements']:
-                        if self.is_adjacent(settlement, i):
-                            resource = self.board['tiles'][i]
-                            if resource != 'barren':
-                                player['resources'][resource] += 1
-                                print(f"Player {player_index + 1} receives 1 {resource} from tile at {tile_position}.")
+        for player in self.players:
+            for settlement in player['settlements']:
+                resources = settlement.get_resources(rolled_number)
+                for resource, amount in resources.items():
+                    player['resources'][resource] += amount
+                    print(f"Player receives {amount} {resource} from settlement at intersection of tiles {settlement.tiles}.")
         self.print_player_resources()  # Debugging: print resources after distribution
 
     def reset(self):
@@ -57,76 +80,99 @@ class CatanEnv(gym.Env):
 
     def set_starting_positions(self):
         starting_positions = [
-            {'settlement': (0, 0), 'road': (0, 1)},  # Player 1
-            {'settlement': (5, 5), 'road': (5, 6)},  # Player 2
-            {'settlement': (10, 10), 'road': (10, 11)},  # Player 3
-            {'settlement': (15, 15), 'road': (15, 16)}   # Player 4
+            {'tiles': [self.board[0], self.board[1], self.board[4]]},  # Player 1
+            {'tiles': [self.board[1], self.board[2], self.board[5]]},  # Player 2
+            {'tiles': [self.board[3], self.board[4], self.board[7]]},  # Player 3
+            {'tiles': [self.board[4], self.board[5], self.board[8]]}   # Player 4
         ]
 
         for i, player in enumerate(self.players):
-            position = starting_positions[i]
-            self.place_settlement(player, position['settlement'])
-            self.place_road(player, position['road'])
-
-    def place_settlement(self, player, position):
-        if not self.is_valid_settlement_position(player, position):
-            return -1  # Invalid position
-        player['settlements'].append(position)
-        self.update_resources(player, position)
-        return 50  # Reward for valid settlement
-
-    def place_road(self, player, position):
-        if not self.is_valid_road_position(player, position):
-            return -1  # Invalid position
-        player['roads'].append(position)
-        return 10  # Reward for valid road
-
-    def update_resources(self, player, position):
-        adjacent_tiles = self.get_adjacent_tiles(position)
-        for tile in adjacent_tiles:
-            resource_type = tile['resource']
-            if resource_type != 'barren':
-                player['resources'][resource_type] += 1
-
-    def get_tile_position(self, tile_index):
-        hex_layout = [
-            (0, 0), (1, 0), (2, 0), (3, 0), (4, 0),
-            (0, 1), (1, 1), (2, 1), (3, 1), (4, 1),
-            (0, 2), (1, 2), (2, 2), (3, 2), (4, 2),
-            (0, 3), (1, 3), (2, 3), (3, 3), (4, 3),
-            (0, 4), (1, 4), (2, 4), (3, 4), (4, 4)
-        ]
-        return hex_layout[tile_index]
-
-    def is_adjacent(self, position, tile_index):
-        tile_position = self.get_tile_position(tile_index)
-        adjacent_positions = [
-            (tile_position[0], tile_position[1] - 1),  # Up
-            (tile_position[0], tile_position[1] + 1),  # Down
-            (tile_position[0] - 1, tile_position[1]),  # Left
-            (tile_position[0] + 1, tile_position[1]),  # Right
-            (tile_position[0] - 1, tile_position[1] - 1),  # Up-Left
-            (tile_position[0] + 1, tile_position[1] + 1)   # Down-Right
-        ]
-        if position in adjacent_positions:
-            print(f"Position {position} is adjacent to tile at {tile_position}")
-        return position in adjacent_positions
-
-    def get_adjacent_tiles(self, position):
-        adjacent_tiles = []
-        for i, tile in enumerate(self.board['tiles']):
-            if self.is_adjacent(position, i):
-                adjacent_tiles.append({'resource': tile, 'number': self.board['numbers'][i]})
-        return adjacent_tiles
+            tiles = starting_positions[i]['tiles']
+            settlement = Settlement(tiles[0], tiles[1], tiles[2])
+            player['settlements'].append(settlement)
 
     def initialize_board(self):
-        board = {
-            'tiles': ['sheep', 'wheat', 'wheat', 'ore', 'ore', 'ore', 'sheep',
-                      'wood', 'wheat', 'sheep', 'brick', 'wood',
-                      'wood', 'wood', 'wheat', 'brick', 'sheep', 'barren', 'brick'],
-            'numbers': [5, 8, 4, 2, 10, 3, 11, 6, 9, 11, 6, 12, 3, 4, 5, 9, 8, 0, 10]
-        }
-        return board
+        # Create hex tiles with resources and numbers
+        tiles = [
+            HexTile('ore', 10), HexTile('brick', 2), HexTile('wheat', 9),
+            HexTile('wheat', 12), HexTile('wood', 6), HexTile('wheat', 4), HexTile('wood', 10),
+            HexTile('ore', 9), HexTile('wood', 11), HexTile('sheep', 3), HexTile('sheep', 6), 
+            HexTile('brick', 8), HexTile('wood', 5), HexTile('wheat', 8), HexTile('sheep', 4), 
+            HexTile('ore', 3), HexTile('wheat', 5), HexTile('barren', 0), HexTile('brick', 11)
+        ]
+        
+        # Manually defining neighbors based on catan board
+
+        # Top row
+        tiles[0].add_neighbor(tiles[1])
+        tiles[0].add_neighbor(tiles[4])
+        tiles[1].add_neighbor(tiles[0])
+        tiles[1].add_neighbor(tiles[2])
+        tiles[1].add_neighbor(tiles[4])
+        tiles[1].add_neighbor(tiles[5])
+        tiles[2].add_neighbor(tiles[1])
+        tiles[2].add_neighbor(tiles[5])
+        tiles[2].add_neighbor(tiles[6])
+
+        # Second row
+        tiles[3].add_neighbor(tiles[4])
+        tiles[3].add_neighbor(tiles[7])
+        tiles[4].add_neighbor(tiles[0])
+        tiles[4].add_neighbor(tiles[1])
+        tiles[4].add_neighbor(tiles[3])
+        tiles[4].add_neighbor(tiles[5])
+        tiles[4].add_neighbor(tiles[7])
+        tiles[5].add_neighbor(tiles[1])
+        tiles[5].add_neighbor(tiles[2])
+        tiles[5].add_neighbor(tiles[4])
+        tiles[5].add_neighbor(tiles[6])
+        tiles[5].add_neighbor(tiles[8])
+        tiles[6].add_neighbor(tiles[2])
+        tiles[6].add_neighbor(tiles[5])
+        tiles[6].add_neighbor(tiles[8])
+
+        # Third row
+        tiles[7].add_neighbor(tiles[3])
+        tiles[7].add_neighbor(tiles[4])
+        tiles[7].add_neighbor(tiles[8])
+        tiles[7].add_neighbor(tiles[12])
+        tiles[8].add_neighbor(tiles[5])
+        tiles[8].add_neighbor(tiles[6])
+        tiles[8].add_neighbor(tiles[7])
+        tiles[8].add_neighbor(tiles[9])
+        tiles[8].add_neighbor(tiles[12])
+        tiles[9].add_neighbor(tiles[6])
+        tiles[9].add_neighbor(tiles[8])
+        tiles[9].add_neighbor(tiles[10])
+        tiles[9].add_neighbor(tiles[13])
+        tiles[10].add_neighbor(tiles[9])
+        tiles[10].add_neighbor(tiles[11])
+        tiles[10].add_neighbor(tiles[14])
+        tiles[11].add_neighbor(tiles[10])
+        tiles[11].add_neighbor(tiles[15])
+
+        # Fourth row
+        tiles[12].add_neighbor(tiles[7])
+        tiles[12].add_neighbor(tiles[8])
+        tiles[12].add_neighbor(tiles[13])
+        tiles[13].add_neighbor(tiles[9])
+        tiles[13].add_neighbor(tiles[12])
+        tiles[13].add_neighbor(tiles[14])
+        tiles[14].add_neighbor(tiles[10])
+        tiles[14].add_neighbor(tiles[13])
+        tiles[14].add_neighbor(tiles[15])
+        tiles[15].add_neighbor(tiles[11])
+        tiles[15].add_neighbor(tiles[14])
+        tiles[15].add_neighbor(tiles[16])
+
+        # Fifth row
+        tiles[16].add_neighbor(tiles[15])
+        tiles[16].add_neighbor(tiles[17])
+        tiles[17].add_neighbor(tiles[16])
+        tiles[17].add_neighbor(tiles[18])
+        tiles[18].add_neighbor(tiles[17])
+
+        return tiles
 
     def initialize_players(self):
         players = []
@@ -172,14 +218,14 @@ class CatanEnv(gym.Env):
 
     def pass_turn(self, player):
         self.current_player = (self.current_player + 1) % self.num_players  # Move on to next player
-        return 1  # Encourage passing turn but not as much as building
+        return 1 # Encourage passing turn but not as much as building
 
     def has_valid_moves(self, player):
-        if self.can_build_road(player):  # Check for valid road
+        if self.can_build_road(player): # Check for valid road
             return True
-        if self.can_build_settlement(player):  # Check for valid settlement
+        if self.can_build_settlement(player): # Check for valid settlement
             return True
-        for action in range(3, 23):  # Check for valid trades with the bank (adjusted to start from 3)
+        for action in range(3, 23): # Check for valid trades with the bank
             give, receive = self.map_action_to_trade(action)
             if give is not None and self.can_trade_with_bank(player, give):
                 return True
@@ -228,8 +274,8 @@ class CatanEnv(gym.Env):
             return 5  # Reward for successful trade
         return -1  # Penalty for insufficient resources to trade
 
+    # Road must be connected to an existing road or settlement
     def build_road(self, player):
-        # Road must be connected to an existing road or settlement
         if player['resources']['wood'] > 0 and player['resources']['brick'] > 0:
             for road in player['roads']:
                 if self.is_valid_road_position(player, road):
@@ -239,8 +285,8 @@ class CatanEnv(gym.Env):
                     return 10  # Reward for building a road
         return -1
 
+    # Settlement must be connected to player's roads and not adjacent to another settlement
     def build_settlement(self, player):
-        # Settlement must be connected to one of the player's roads and not adjacent to another settlement
         if player['resources']['wood'] > 0 and player['resources']['brick'] > 0 and player['resources']['wheat'] > 0 and player['resources']['sheep'] > 0:
             for road in player['roads']:
                 if self.is_valid_settlement_position(player, road):
@@ -253,31 +299,31 @@ class CatanEnv(gym.Env):
                     return 50  # Reward for building a settlement
         return -1
 
-    def is_valid_road_position(self, player, position):
-        # Road must be connected to an existing road or settlement
+    # Road must be connected to an existing road or settlement
+    def is_valid_road_position(self, player, tile):
         for settlement in player['settlements']:
-            if self.is_adjacent(settlement, position):
+            if tile in settlement.neighbors:
                 return True
         for road in player['roads']:
-            if self.is_adjacent(road, position):
+            if tile in road.neighbors:
                 return True
         return False
 
-    def is_valid_settlement_position(self, player, position):
-        # Settlement must not be adjacent to another settlement and must be connected to a road
-        if any(self.is_adjacent(settlement, position) for settlement in player['settlements']):
+    # Settlement can't be adjacent to another settlement and must be connected to a road
+    def is_valid_settlement_position(self, player, tile):
+        if any(tile in settlement.neighbors for settlement in player['settlements']):
             return False
-        if any(self.is_adjacent(road, position) for road in player['roads']):
+        if any(tile in road.neighbors for road in player['roads']):
             return True
         return False
 
     def get_state(self):
         state = []
 
-        # Board state (Tiles and numbers)
-        for tile in self.board['tiles']:
-            state.extend(self.one_hot_encode_tile(tile))
-        state.extend(self.board['numbers'])
+        # Board state (tiles)
+        for tile in self.board:
+            state.extend(self.one_hot_encode_tile(tile.resource))
+        state.extend(tile.number for tile in self.board)
 
         # Player resources, roads, and settlements
         for player in self.players:
@@ -312,7 +358,7 @@ class CatanEnv(gym.Env):
         return False
 
     def print_player_resources(self):
-        """Print the resources of each player for debugging purposes."""
+        # Print resources of each player for debugging
         for i, player in enumerate(self.players):
             print(f"Player {i + 1} resources: {player['resources']}")
 
