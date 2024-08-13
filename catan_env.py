@@ -58,8 +58,19 @@ class CatanEnv(gym.Env):
         
         self.current_player = -1
         self.nextTurn()
+        
+        self.initDevCards()
 
         return self.get_state()
+    
+    def initDevCards(self):
+        self.dev_card_map = {0 : 'knight',
+                             1 : 'victory',
+                             2 : 'road building',
+                             3 : 'year of plenty',
+                             4 : 'monopoly',}
+        self.banked_dev_cards = ([0]*14) + ([1]*5) + ([2]*2) + ([3]*2) + ([4]*2)
+        random.shuffle(self.banked_dev_cards)
 
     def set_starting_positions(self):
         starting_positions = [
@@ -146,11 +157,20 @@ class CatanEnv(gym.Env):
             reward = self.build_road(player)
         elif action == 1:  # Build a settlement
             reward = self.build_settlement(player)
-        elif action <= 21:  # Trade with bank
+        elif action <= 21:  # Trade with bank -- actions 2-21
             give, receive = self.map_action_to_trade(action)
             reward = self.trade_with_bank(player, give, receive)
-        elif action == 22:
+        elif action == 22: # End turn
             reward = self.nextTurn()
+        # ---------------- WIP ----------------
+        elif action == 26: # Buy dev cards
+            reward = self.buy_dev_card(player)
+            pass
+        elif action <= 27: # Play dev card -- soldier, year-of-plenty, monopoly, build-roads
+            pass
+        elif action == 28: # Build city
+            pass
+            
         else:
             raise Exception('Unknown Action ID')
 
@@ -161,6 +181,14 @@ class CatanEnv(gym.Env):
         
         return reward
 
+    def buy_dev_card(self, player):
+        # --- WIP ---
+        # Check bank inv
+        # Check resource reqs
+        # Pop a dev card from bank deck
+        # Give card to player
+        # Return reward
+        return 0
 
     def map_action_to_trade(self, action):
         if 2 <= action <= 5:  # Trade wood
