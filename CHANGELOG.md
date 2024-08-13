@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.9] - 2024-08-12
+### Added
+- N/A
+
+### Changed
+- Modified the rewards for actions to better train model
+- Player starting positions are no longer clumped
+
+### Fixed
+- N/A
+
 ## [1.0.8] - 2024-08-12
 ### Added
 - Added manual definitions of neighbors for every tile object

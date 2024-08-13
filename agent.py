@@ -8,9 +8,9 @@ from catan_env import CatanEnv
 class QNetwork(nn.Module):
     def __init__(self, state_size, action_size):
         super(QNetwork, self).__init__()
-        self.fc1 = nn.Linear(state_size, 64)
-        self.fc2 = nn.Linear(64, 64)
-        self.fc3 = nn.Linear(64, action_size)
+        self.fc1 = nn.Linear(state_size, 128)
+        self.fc2 = nn.Linear(128, 128)
+        self.fc3 = nn.Linear(128, action_size)
 
     def forward(self, x):
         x = torch.relu(self.fc1(x))
@@ -35,6 +35,8 @@ class CatanAgent:
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
+        if len(self.memory) > 2000:  # Limit the size of the memory
+            self.memory.pop(0)
 
     def act(self, state):
         if np.random.rand() <= self.epsilon:
@@ -80,11 +82,9 @@ class RuleBasedAgent:
         pass
 
     def choose_action(self, state):
-        wood = state[150]  # Assumes wood is at index 150
-        brick = state[151]
-        wheat = state[152]
-        sheep = state[153]
-        ore = state[154]
+        # Simple strategy: build roads or settlements if possible, otherwise pass
+        resources = state[-10:-5]  # Assuming resources are the last 5 elements in the state
+        wood, brick, wheat, sheep, ore = resources
 
         if wood > 0 and brick > 0:
             return 0  # Build a road
@@ -97,7 +97,7 @@ class RuleBasedAgent:
 
         return random.choice([i for i in range(3, 23)])  # Trade with bank randomly
 
-def train_agent(env, agent, rule_based_agents, episodes=1000):
+def train_agent(env, agent, rule_based_agents, episodes=5):
     for e in range(episodes):
         state = env.reset()
         for time in range(500):
@@ -105,13 +105,14 @@ def train_agent(env, agent, rule_based_agents, episodes=1000):
             next_state, reward, done, _ = env.step(action)
             agent.remember(state, action, reward, next_state, done)
             state = next_state
-            if done:
-                print(f"Episode: {e}/{episodes}, Score: {time}, Epsilon: {agent.epsilon:.2}")
-                break
             agent.replay()
+            if done:
+                print(f"Episode {e+1}/{episodes} completed. Score: {time}, Epsilon: {agent.epsilon:.2f}")
+                break
 
-        if e % 100 == 0:
-            agent.save(f"catan_agent_{e}.pth")
+        if (e + 1) % 100 == 0:
+            agent.save(f"catan_agent_{e + 1}.pth")
+            print(f"Agent model saved after {e + 1} episodes.")
 
 if __name__ == "__main__":
     env = CatanEnv()
@@ -120,6 +121,7 @@ if __name__ == "__main__":
     agent = CatanAgent(state_size, action_size)
     rule_based_agents = [RuleBasedAgent() for _ in range(3)]  # Other players are rule-based
 
-    # Rule based training
-    train_agent(env, agent, rule_based_agents)
+    # Train the agent
+    train_agent(env, agent, rule_based_agents, episodes=5)
     agent.save("final_catan_agent.pth")
+    print("Final agent model saved.")

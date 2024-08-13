@@ -30,6 +30,10 @@ class Settlement:
                 resources[tile.resource] += 1
         return resources
 
+class Road:
+    def __init__(self, tile1, tile2):
+        self.tiles = (tile1, tile2)
+
 class CatanEnv(gym.Env):
     def __init__(self):
         super(CatanEnv, self).__init__()
@@ -50,7 +54,7 @@ class CatanEnv(gym.Env):
 
             # Roll dice and distribute resources
             rolled_number = self.roll_dice()
-            print(f"Dice rolled: {rolled_number}")
+            # print(f"Dice rolled: {rolled_number}")
             self.distribute_resources(rolled_number)
 
         state = self.get_state()
@@ -66,8 +70,8 @@ class CatanEnv(gym.Env):
                 resources = settlement.get_resources(rolled_number)
                 for resource, amount in resources.items():
                     player['resources'][resource] += amount
-                    print(f"Player receives {amount} {resource} from settlement at intersection of tiles {settlement.tiles}.")
-        self.print_player_resources()  # Debugging: print resources after distribution
+                    # print(f"Player receives {amount} {resource} from settlement at intersection of tiles {settlement.tiles}.")
+        #self.print_player_resources()  # Debugging: print resources after distribution
 
     def reset(self):
         self.board = self.initialize_board()
@@ -81,10 +85,11 @@ class CatanEnv(gym.Env):
     def set_starting_positions(self):
         starting_positions = [
             {'tiles': [self.board[0], self.board[1], self.board[4]]},  # Player 1
-            {'tiles': [self.board[1], self.board[2], self.board[5]]},  # Player 2
-            {'tiles': [self.board[3], self.board[4], self.board[7]]},  # Player 3
-            {'tiles': [self.board[4], self.board[5], self.board[8]]}   # Player 4
+            {'tiles': [self.board[5], self.board[6], self.board[9]]},  # Player 2
+            {'tiles': [self.board[10], self.board[11], self.board[14]]},  # Player 3
+            {'tiles': [self.board[15], self.board[16], self.board[18]]}   # Player 4
         ]
+
 
         for i, player in enumerate(self.players):
             tiles = starting_positions[i]['tiles']
@@ -101,7 +106,7 @@ class CatanEnv(gym.Env):
             HexTile('ore', 3), HexTile('wheat', 5), HexTile('barren', 0), HexTile('brick', 11)
         ]
         
-        # Manually defining neighbors based on catan board
+        # Manually defining neighbors based on the board layout in the image
 
         # Top row
         tiles[0].add_neighbor(tiles[1])
@@ -192,7 +197,8 @@ class CatanEnv(gym.Env):
         valid_action = True
 
         if action == 0:  # Build a road
-            reward = self.build_road(player)
+            tile1, tile2 = self.choose_road_tiles(player)
+            reward = self.build_road(player, tile1, tile2)
         elif action == 1:  # Build a settlement
             reward = self.build_settlement(player)
         elif action == 2:  # Pass to next player
@@ -271,51 +277,65 @@ class CatanEnv(gym.Env):
         if player['resources'][give] >= 4:
             player['resources'][give] -= 4
             player['resources'][receive] += 1
-            return 5  # Reward for successful trade
+            return 15  # Reward for successful trade
         return -1  # Penalty for insufficient resources to trade
 
     # Road must be connected to an existing road or settlement
-    def build_road(self, player):
+    def build_road(self, player, tile1, tile2):
         if player['resources']['wood'] > 0 and player['resources']['brick'] > 0:
-            for road in player['roads']:
-                if self.is_valid_road_position(player, road):
-                    player['resources']['wood'] -= 1
-                    player['resources']['brick'] -= 1
-                    player['roads'].append(road)
-                    return 10  # Reward for building a road
+            if self.is_valid_road_position(player, tile1, tile2):
+                player['resources']['wood'] -= 1
+                player['resources']['brick'] -= 1
+                road = Road(tile1, tile2)
+                player['roads'].append(road)
+                return 50  # Reward for building a road
         return -1
 
     # Settlement must be connected to player's roads and not adjacent to another settlement
     def build_settlement(self, player):
-        if player['resources']['wood'] > 0 and player['resources']['brick'] > 0 and player['resources']['wheat'] > 0 and player['resources']['sheep'] > 0:
-            for road in player['roads']:
-                if self.is_valid_settlement_position(player, road):
-                    player['resources']['wood'] -= 1
-                    player['resources']['brick'] -= 1
-                    player['resources']['wheat'] -= 1
-                    player['resources']['sheep'] -= 1
-                    player['settlements'].append(road)
-                    player['victory_points'] += 1
-                    return 50  # Reward for building a settlement
+        player_index = self.players.index(player)
+        for settlement_tiles in self.get_potential_settlement_positions(player):
+            if self.is_valid_settlement_position(player, *settlement_tiles):
+                player['resources']['wood'] -= 1
+                player['resources']['brick'] -= 1
+                player['resources']['wheat'] -= 1
+                player['resources']['sheep'] -= 1
+                settlement = Settlement(*settlement_tiles)
+                player['settlements'].append(settlement)
+                player['victory_points'] += 1
+                player_victory_points = player['victory_points']
+                print(f"Player {player_index + 1} has built a settlement and now has {player_victory_points} victory points!")
+                return 100  # Reward for building a settlement
         return -1
 
     # Road must be connected to an existing road or settlement
-    def is_valid_road_position(self, player, tile):
+    def is_valid_road_position(self, player, tile1, tile2):
         for settlement in player['settlements']:
-            if tile in settlement.neighbors:
+            if tile1 in settlement.tiles or tile2 in settlement.tiles:
                 return True
         for road in player['roads']:
-            if tile in road.neighbors:
+            if tile1 in road.tiles or tile2 in road.tiles:
                 return True
         return False
 
     # Settlement can't be adjacent to another settlement and must be connected to a road
-    def is_valid_settlement_position(self, player, tile):
-        if any(tile in settlement.neighbors for settlement in player['settlements']):
+    def is_valid_settlement_position(self, player, tile1, tile2, tile3):
+        if any(any(t in settlement.tiles for t in [tile1, tile2, tile3]) for settlement in player['settlements']):
             return False
-        if any(tile in road.neighbors for road in player['roads']):
-            return True
+        for road in player['roads']:
+            if tile1 in road.tiles or tile2 in road.tiles or tile3 in road.tiles:
+                return True
         return False
+
+    # Iterate through all possible groups of three adjacent tiles on the board
+    def get_potential_settlement_positions(self, player):
+        potential_positions = []
+        for tile1 in self.board:
+            for tile2 in tile1.neighbors:
+                for tile3 in tile2.neighbors:
+                    if tile3 in tile1.neighbors:
+                        potential_positions.append((tile1, tile2, tile3))
+        return potential_positions
 
     def get_state(self):
         state = []
@@ -356,21 +376,30 @@ class CatanEnv(gym.Env):
             if player['victory_points'] >= 10:  # Win condition
                 return True
         return False
-
+    '''
     def print_player_resources(self):
         # Print resources of each player for debugging
         for i, player in enumerate(self.players):
             print(f"Player {i + 1} resources: {player['resources']}")
+    '''
 
-# Test the environment with the new action logic
+    def choose_road_tiles(self, player):
+        # For simplicity, just choose the first valid pair of tiles connected by an existing road or settlement
+        for tile1 in self.board:
+            for tile2 in tile1.neighbors:
+                if self.is_valid_road_position(player, tile1, tile2):
+                    return tile1, tile2
+        return None, None
+
+# Test the environment
 env = CatanEnv()
 state = env.reset()
-print("Initial state:", state)
+#print("Initial state:", state)
 
 for _ in range(1000):
     action = env.action_space.sample()
     state, reward, done, info = env.step(action)
-    print("Action:", action, "State:", state, "Reward:", reward, "Done:", done)
+    #print("Action:", action, "State:", state, "Reward:", reward, "Done:", done)
     if done:
         print("Game completed.")
         break
