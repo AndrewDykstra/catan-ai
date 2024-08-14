@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.10] - 2024-08-13
+### Added
+- N/A
+
+### Changed
+- Modified the victory point distribution (Still debugging the issue of victory points resetting after 5 have been given out in total)
+
+### Fixed
+- N/A
+
 ## [1.0.9] - 2024-08-12
 ### Added
 - N/A
