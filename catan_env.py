@@ -143,6 +143,7 @@ class CatanEnv(gym.Env):
         for _ in range(4):
             player = {
                 'resources': {'wood': 0, 'brick': 0, 'wheat': 0, 'sheep': 0, 'ore': 0},
+                'dev_cards': {'knight': 0, 'victory': 0, 'road building': 0, 'year of plenty': 0, 'monopoly': 0},
                 'victory_points': 0,
                 'settlements': [],
                 'roads': []
@@ -165,9 +166,8 @@ class CatanEnv(gym.Env):
         # ---------------- WIP ----------------
         elif action == 26: # Buy dev cards
             reward = self.buy_dev_card(player)
-            pass
         elif action <= 27: # Play dev card -- soldier, year-of-plenty, monopoly, build-roads
-            pass
+            reward = self.use_dev_card(player)
         elif action == 28: # Build city
             pass
             
@@ -182,13 +182,19 @@ class CatanEnv(gym.Env):
         return reward
 
     def buy_dev_card(self, player):
-        # --- WIP ---
-        # Check bank inv
-        # Check resource reqs
-        # Pop a dev card from bank deck
-        # Give card to player
-        # Return reward
-        return 0
+        if len(self.banked_dev_cards) > 0 and player['resources']['wheat'] > 0 and player['resources']['sheep'] > 0 and player['resources']['ore'] > 0:
+            receive = self.banked_dev_cards.pop()
+            player['dev_cards'][receive] += 1
+            return 5
+        return -1
+    
+    def use_dev_card(self, player, actionId):
+        cards = ['soldier', 'year of plenty', 'monopoly', 'road building']
+        id_offset = 24
+        
+        # ------- WIP -----------
+        
+        return -1
 
     def map_action_to_trade(self, action):
         if 2 <= action <= 5:  # Trade wood
