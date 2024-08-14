@@ -1,5 +1,16 @@
 # Changelog
-## [1.0.10] - 2024-08-14
+
+## [1.0.12] - 2024-08-14
+### Added
+- Debugging print lines to figure out the issue of the games not completing
+
+### Changed
+- N/A
+
+### Fixed
+- Version number for 1.0.11 push
+
+## [1.0.11] - 2024-08-14
 ### Added
 - N/A
 

@@ -44,7 +44,7 @@ class CatanEnv(gym.Env):
         self.observation_space = spaces.Box(low=0, high=1, shape=(165,), dtype=np.float32)
 
         # Initialize game state
-        self.reset()
+        self.reset() 
 
     def step(self, action):
         reward = 0
@@ -74,13 +74,17 @@ class CatanEnv(gym.Env):
         #self.print_player_resources()  # Debugging: print resources after distribution
 
     def reset(self):
+        print("Resetting the game environment...")
         self.board = self.initialize_board()
         self.players = self.initialize_players()
         self.current_player = 0
         self.done = False
         self.set_starting_positions()
-
+        print("Initial victory points after reset:")
+        for i, player in enumerate(self.players):
+            print(f"Player {i+1}: {player['victory_points']} points")
         return self.get_state()
+
 
     def set_starting_positions(self):
         starting_positions = [
@@ -216,6 +220,7 @@ class CatanEnv(gym.Env):
         return players
 
     def perform_action(self, action):
+        print(f"Player {self.current_player + 1} performing action {action}")
         player = self.players[self.current_player]
         reward = 0
         valid_action = True
@@ -243,8 +248,12 @@ class CatanEnv(gym.Env):
 
         # Check if the game is done after each action
         self.done = self.check_done()
+        if self.done:
+            print(f"Player {self.current_player + 1} reached 10 points. Game done.")
+            print("Game ended, resetting environment...")
 
         return reward
+
 
     def pass_turn(self, player):
         self.current_player = (self.current_player + 1) % self.num_players  # Move on to next player
@@ -400,7 +409,12 @@ class CatanEnv(gym.Env):
     
     def check_done(self):
         # Ensure it checks the self.done flag, which is set when a player wins
+        for player in self.players:
+            if player['victory_points'] >= 10:  # Victory condition
+                self.done = True
+                return self.done
         return self.done
+
 
     '''
     def print_player_resources(self):

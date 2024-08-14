@@ -97,19 +97,25 @@ class RuleBasedAgent:
 
         return random.choice([i for i in range(3, 23)])  # Trade with bank randomly
 
-def train_agent(env, agent, rule_based_agents, episodes=5):
+def train_agent(env, agent, rule_based_agents, episodes=1):
     for e in range(episodes):
+        print("Starting new episode")
         state = env.reset()
         done = False
+        step_count = 0
         while not done:
             action = agent.act(state)
             next_state, reward, done, _ = env.step(action)
+            print(f"Step {step_count}: Action {action}, Reward: {reward}, Done: {done}")
             agent.remember(state, action, reward, next_state, done)
             state = next_state
             agent.replay()
+            step_count += 1
 
-        print(f"Episode {e+1}/{episodes} completed. Final Epsilon: {agent.epsilon:.2f}")
-
+        print(f"Episode {e+1}/{episodes} completed after {step_count} steps. Final Epsilon: {agent.epsilon:.2f}")
+        if done:
+            print("Game ended naturally, preparing for next episode.")
+        
         if (e + 1) % 100 == 0:
             agent.save(f"catan_agent_{e + 1}.pth")
             print(f"Agent model saved after {e + 1} episodes.")
