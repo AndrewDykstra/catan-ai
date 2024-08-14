@@ -182,10 +182,20 @@ class CatanEnv(gym.Env):
         return reward
 
     def buy_dev_card(self, player):
+        # check if bank contains any dev cards and if player can afford to buy a dev card
         if len(self.banked_dev_cards) > 0 and player['resources']['wheat'] > 0 and player['resources']['sheep'] > 0 and player['resources']['ore'] > 0:
-            receive = self.banked_dev_cards.pop()
+            # get dev card from bank
+            receive = self.dev_card_map[self.banked_dev_cards.pop()]
+            # update player inventory
+            player['resources']['wheat'] -= 1
+            player['resources']['sheep'] -= 1
+            player['resources']['ore'] -= 1
             player['dev_cards'][receive] += 1
-            return 5
+            
+            # update player VP if received a victory card
+            if receive == 'victory':
+                self.players[player]['victory_points'] += 1
+            return 5 # maybe change reward
         return -1
     
     def use_dev_card(self, player, actionId):
