@@ -1,4 +1,14 @@
 # Changelog
+## [1.0.10] - 2024-08-14
+### Added
+- N/A
+
+### Changed
+- Modified the map, now every player has access to every resource off the starting settlements
+- Every player starts with two settlements and two roads now
+
+### Fixed
+- N/A
 
 ## [1.0.10] - 2024-08-13
 ### Added

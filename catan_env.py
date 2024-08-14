@@ -84,20 +84,44 @@ class CatanEnv(gym.Env):
 
     def set_starting_positions(self):
         starting_positions = [
-            {'tiles': [self.board[0], self.board[1], self.board[4]]},  # Player 1
-            {'tiles': [self.board[5], self.board[6], self.board[9]]},  # Player 2
-            {'tiles': [self.board[10], self.board[11], self.board[14]]},  # Player 3
-            {'tiles': [self.board[15], self.board[16], self.board[18]]}   # Player 4
+            {'tiles': [self.board[0], self.board[1], self.board[3]], 'road': [self.board[0], self.board[1]]},  # Player 1
+            {'tiles': [self.board[4], self.board[5], self.board[9]], 'road': [self.board[4], self.board[5]]},  # Player 1
+            {'tiles': [self.board[6], self.board[7], self.board[10]], 'road': [self.board[6], self.board[7]]},  # Player 2
+            {'tiles': [self.board[11], self.board[12], self.board[13]], 'road': [self.board[11], self.board[12]]},  # Player 2
+            {'tiles': [self.board[14], self.board[15], self.board[16]], 'road': [self.board[14], self.board[15]]},  # Player 3
+            {'tiles': [self.board[8], self.board[17], self.board[18]], 'road': [self.board[8], self.board[17]]},  # Player 3
+            {'tiles': [self.board[1], self.board[2], self.board[4]], 'road': [self.board[1], self.board[2]]},  # Player 4
+            {'tiles': [self.board[5], self.board[8], self.board[10]], 'road': [self.board[5], self.board[8]]},  # Player 4
         ]
-
-
+        
+        # This will loop through the 4 players and append their settlements + roads to their player objects
         for i, player in enumerate(self.players):
-            tiles = starting_positions[i]['tiles']
-            settlement = Settlement(tiles[0], tiles[1], tiles[2])
-            player['settlements'].append(settlement)
+            tiles = starting_positions[i * 2]['tiles']
+            road_tiles = starting_positions[i * 2]['road']
+            settlement1 = Settlement(tiles[0], tiles[1], tiles[2])
+            settlement2 = Settlement(starting_positions[i * 2 + 1]['tiles'][0], starting_positions[i * 2 + 1]['tiles'][1], starting_positions[i * 2 + 1]['tiles'][2])
+            road1 = Road(road_tiles[0], road_tiles[1])
+            road2 = Road(starting_positions[i * 2 + 1]['road'][0], starting_positions[i * 2 + 1]['road'][1])
+
+            player['settlements'].append(settlement1)
+            player['settlements'].append(settlement2)
+            player['roads'].append(road1)
+            player['roads'].append(road2)
+            player['victory_points'] += 2  # Each settlement counts for 1 victory point
+
 
     def initialize_board(self):
         # Create hex tiles with resources and numbers
+        tiles = [ # Custom map so every player has access to all 5 resources off of starting locations
+            HexTile('wood', 5),  HexTile('brick', 6), HexTile('wheat', 8),
+            HexTile('sheep', 10), HexTile('ore', 9), HexTile('wood', 4),
+            HexTile('brick', 11), HexTile('wood', 12), HexTile('ore', 3),
+            HexTile('wheat', 11), HexTile('sheep', 8), HexTile('wheat', 10), 
+            HexTile('ore', 6), HexTile('brick', 4), HexTile('wood', 9),
+            HexTile('wheat', 5), HexTile('sheep', 2), HexTile('barren', 0), HexTile('brick', 3)
+        ]
+
+        '''
         tiles = [
             HexTile('ore', 10), HexTile('brick', 2), HexTile('wheat', 9),
             HexTile('wheat', 12), HexTile('wood', 6), HexTile('wheat', 4), HexTile('wood', 10),
@@ -105,8 +129,8 @@ class CatanEnv(gym.Env):
             HexTile('brick', 8), HexTile('wood', 5), HexTile('wheat', 8), HexTile('sheep', 4), 
             HexTile('ore', 3), HexTile('wheat', 5), HexTile('barren', 0), HexTile('brick', 11)
         ]
-        
-        # Manually defining neighbors based on the board layout in the image
+        '''
+        # Manually defining neighbors
 
         # Top row
         tiles[0].add_neighbor(tiles[1])
@@ -305,7 +329,7 @@ class CatanEnv(gym.Env):
                 player['victory_points'] += 1
                 print(f"Player {player_index + 1} has built a settlement and now has {player['victory_points']} victory points!")
                 # Check if player has won
-                if player['victory_points'] >= 5:  # Lowered victory points requirement
+                if player['victory_points'] >= 10:  # Lowered victory points requirement
                     self.done = True
                     print(f"Player {player_index + 1} wins the game with {player['victory_points']} victory points!")
                 return 100  # Reward for building a settlement
