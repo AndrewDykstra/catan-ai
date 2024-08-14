@@ -303,8 +303,11 @@ class CatanEnv(gym.Env):
                 settlement = Settlement(*settlement_tiles)
                 player['settlements'].append(settlement)
                 player['victory_points'] += 1
-                player_victory_points = player['victory_points']
-                print(f"Player {player_index + 1} has built a settlement and now has {player_victory_points} victory points!")
+                print(f"Player {player_index + 1} has built a settlement and now has {player['victory_points']} victory points!")
+                # Check if player has won
+                if player['victory_points'] >= 5:  # Lowered victory points requirement
+                    self.done = True
+                    print(f"Player {player_index + 1} wins the game with {player['victory_points']} victory points!")
                 return 100  # Reward for building a settlement
         return -1
 
@@ -372,10 +375,9 @@ class CatanEnv(gym.Env):
         return encoding
     
     def check_done(self):
-        for player in self.players:
-            if player['victory_points'] >= 10:  # Win condition
-                return True
-        return False
+        # Ensure it checks the self.done flag, which is set when a player wins
+        return self.done
+
     '''
     def print_player_resources(self):
         # Print resources of each player for debugging

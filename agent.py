@@ -100,15 +100,15 @@ class RuleBasedAgent:
 def train_agent(env, agent, rule_based_agents, episodes=5):
     for e in range(episodes):
         state = env.reset()
-        for time in range(500):
+        done = False
+        while not done:
             action = agent.act(state)
             next_state, reward, done, _ = env.step(action)
             agent.remember(state, action, reward, next_state, done)
             state = next_state
             agent.replay()
-            if done:
-                print(f"Episode {e+1}/{episodes} completed. Score: {time}, Epsilon: {agent.epsilon:.2f}")
-                break
+
+        print(f"Episode {e+1}/{episodes} completed. Final Epsilon: {agent.epsilon:.2f}")
 
         if (e + 1) % 100 == 0:
             agent.save(f"catan_agent_{e + 1}.pth")
