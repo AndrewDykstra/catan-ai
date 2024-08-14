@@ -97,7 +97,7 @@ class RuleBasedAgent:
 
         return random.choice([i for i in range(3, 23)])  # Trade with bank randomly
 
-def train_agent(env, agent, rule_based_agents, episodes=1):
+def train_agent(env, agent, rule_based_agents, episodes):
     for e in range(episodes):
         print("Starting new episode")
         state = env.reset()
@@ -128,6 +128,6 @@ if __name__ == "__main__":
     rule_based_agents = [RuleBasedAgent() for _ in range(3)]  # Other players are rule-based
 
     # Train the agent
-    train_agent(env, agent, rule_based_agents, episodes=5)
+    train_agent(env, agent, rule_based_agents, episodes=150)
     agent.save("final_catan_agent.pth")
     print("Final agent model saved.")

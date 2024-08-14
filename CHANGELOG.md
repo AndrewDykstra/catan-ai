@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.1.0] - 2024-08-14
+### Added
+- Agent can now upgrade settlements to cities
+
+### Changed
+- Victory point win threshold is now 5
+
+### Fixed
+- Agent is now successfully learning!
+- Victory point tracking is also corrected
+
 ## [1.0.12] - 2024-08-14
 ### Added
 - Debugging print lines to figure out the issue of the games not completing

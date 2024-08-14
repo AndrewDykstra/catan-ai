@@ -20,6 +20,7 @@ class HexTile:
 class Settlement:
     def __init__(self, tile1, tile2, tile3):
         self.tiles = [tile1, tile2, tile3]
+        self.is_city = False
     
     def get_resources(self, rolled_number):
         resources = {}
@@ -29,6 +30,9 @@ class Settlement:
                     resources[tile.resource] = 0
                 resources[tile.resource] += 1
         return resources
+    
+    def upgrade_to_city(self):
+        self.is_city = True
 
 class Road:
     def __init__(self, tile1, tile2):
@@ -40,7 +44,7 @@ class CatanEnv(gym.Env):
         self.num_players = 4
         self.current_player = 0
 
-        self.action_space = spaces.Discrete(23)  # Number of possible/valid actions
+        self.action_space = spaces.Discrete(24)  # Number of possible/valid actions
         self.observation_space = spaces.Box(low=0, high=1, shape=(165,), dtype=np.float32)
 
         # Initialize game state
@@ -232,6 +236,8 @@ class CatanEnv(gym.Env):
             reward = self.build_settlement(player)
         elif action == 2:  # Pass to next player
             reward = self.pass_turn(player)
+        elif action == 23:  # Upgrade to a city
+            reward = self.upgrade_to_city(player)
         else:  # Trade with bank
             give, receive = self.map_action_to_trade(action)
             reward = self.trade_with_bank(player, give, receive)
@@ -249,7 +255,6 @@ class CatanEnv(gym.Env):
         # Check if the game is done after each action
         self.done = self.check_done()
         if self.done:
-            print(f"Player {self.current_player + 1} reached 10 points. Game done.")
             print("Game ended, resetting environment...")
 
         return reward
@@ -269,6 +274,22 @@ class CatanEnv(gym.Env):
             if give is not None and self.can_trade_with_bank(player, give):
                 return True
         return False
+
+    # Upgrade a settlement to a city which gives another victory point
+    def upgrade_to_city(self, player):
+        if player['resources']['wheat'] >= 2 and player['resources']['ore'] >= 3:
+            for settlement in player['settlements']:
+                if not settlement.is_city:
+                    settlement.upgrade_to_city()  # Upgrade the settlement to a city
+                    player['resources']['wheat'] -= 2
+                    player['resources']['ore'] -= 3
+                    player['victory_points'] += 1
+                    print(f"Player {self.current_player + 1} has upgraded a settlement to a city!")
+                    if player['victory_points'] >= 5:
+                        self.done = True
+                        print(f"Player {self.current_player + 1} wins the game with {player['victory_points']} victory points!")
+                    return 100  # Reward for upgrading to a city
+        return -1
 
     def can_build_road(self, player):
         return player['resources']['wood'] > 0 and player['resources']['brick'] > 0
@@ -338,7 +359,7 @@ class CatanEnv(gym.Env):
                 player['victory_points'] += 1
                 print(f"Player {player_index + 1} has built a settlement and now has {player['victory_points']} victory points!")
                 # Check if player has won
-                if player['victory_points'] >= 10:  # Lowered victory points requirement
+                if player['victory_points'] >= 5:
                     self.done = True
                     print(f"Player {player_index + 1} wins the game with {player['victory_points']} victory points!")
                 return 100  # Reward for building a settlement
@@ -410,7 +431,7 @@ class CatanEnv(gym.Env):
     def check_done(self):
         # Ensure it checks the self.done flag, which is set when a player wins
         for player in self.players:
-            if player['victory_points'] >= 10:  # Victory condition
+            if player['victory_points'] >= 5:  # Victory condition
                 self.done = True
                 return self.done
         return self.done
