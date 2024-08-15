@@ -1,5 +1,17 @@
 # Changelog
 
+ [1.1.2] - 2024-08-14
+### Added
+- Created a new directory for data from 10 episodes of training
+- Conducted 60 episodes of training and move them to a new directory as well
+- Conducted 150 episodes of training and moved to new directory
+
+### Changed
+- Corrected the turn order to be a snake turn order 1 -> 2 -> 3 -> 4 -> 4 -> 3 -> 2 -> 1 repeat
+
+### Fixed
+- Corrected Changelog for version 1.1.1
+
 ## [1.1.1] - 2024-08-14
 ### Added
 - Added multiple forms of tracking metrics on Agent's performance via Matplotlib which export images to results directory
@@ -8,9 +20,10 @@
 ### Changed
 - Modified the turn penalty to -3 instead of -1
 - Agents now all use Q-learning and without rulesets in training
+- Updatd README milestones accordingly
 
 ### Fixed
-- Corrected the turn order to be a snake turn order
+- N/A
 
 ## [1.1.0] - 2024-08-14
 ### Added

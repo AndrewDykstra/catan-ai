@@ -143,7 +143,7 @@ if __name__ == "__main__":
     agents = [CatanAgent(state_size, action_size) for _ in range(env.num_players)]  # All players now using Q-learning
 
     # Train the agent
-    episode_rewards, episode_lengths, episode_losses, action_counts = train_agent(env, agents, episodes=10)
+    episode_rewards, episode_lengths, episode_losses, action_counts = train_agent(env, agents, episodes=150)
     agents[0].save("final_catan_agent.pth")
     print("Final agent model saved.")
 
