@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.1] - 2024-08-14
+### Added
+- Added multiple forms of tracking metrics on Agent's performance via Matplotlib which export images to results directory
+- Step max out at 10,000 steps to prevent infinite loops in training if reached
+
+### Changed
+- Modified the turn penalty to -3 instead of -1
+- Agents now all use Q-learning and without rulesets in training
+
+### Fixed
+- Corrected the turn order to be a snake turn order
+
 ## [1.1.0] - 2024-08-14
 ### Added
 - Agent can now upgrade settlements to cities

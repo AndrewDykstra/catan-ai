@@ -242,15 +242,12 @@ class CatanEnv(gym.Env):
             give, receive = self.map_action_to_trade(action)
             reward = self.trade_with_bank(player, give, receive)
 
-        if reward == -1:  # Penalty for attempting an invalid action
-            reward = -0.1
+        if reward == -1:  # Penalty for attempting an invalid action, just a quicker way to change it for all actions
+            reward = -3
             valid_action = False
 
-        if valid_action:  # If action is valid, move on to next player
-            self.current_player = (self.current_player + 1) % len(self.players)
-        else:  # Check if there are no more valid actions
-            if not self.has_valid_moves(player):
-                self.current_player = (self.current_player + 1) % len(self.players)
+        # Move to the next player regardless of the action's validity
+        self.current_player = (self.current_player + 1) % self.num_players
 
         # Check if the game is done after each action
         self.done = self.check_done()

@@ -1,9 +1,13 @@
+import os
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import random
 from catan_env import CatanEnv
+import matplotlib.pyplot as plt
+
+os.makedirs('results', exist_ok=True)
 
 class QNetwork(nn.Module):
     def __init__(self, state_size, action_size):
@@ -48,9 +52,10 @@ class CatanAgent:
 
     def replay(self):
         if len(self.memory) < self.batch_size:
-            return
+            return None
 
         minibatch = random.sample(self.memory, self.batch_size)
+        total_loss = 0
 
         for state, action, reward, next_state, done in minibatch:
             state = torch.FloatTensor(state).unsqueeze(0)
@@ -64,6 +69,7 @@ class CatanAgent:
             target_f[0][action] = target
             output = self.model(state)
             loss = self.criterion(output, target_f)
+            total_loss += loss.item()
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
@@ -71,48 +77,56 @@ class CatanAgent:
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
+        return total_loss / len(minibatch)
+
     def load(self, name):
         self.model.load_state_dict(torch.load(name))
 
     def save(self, name):
         torch.save(self.model.state_dict(), name)
 
-class RuleBasedAgent:
-    def __init__(self):
-        pass
+def train_agent(env, agents, episodes):
+    episode_rewards = []  # To track total rewards per episode
+    episode_lengths = []  # To track the number of steps per episode
+    episode_losses = []   # To track losses per episode
+    action_counts = {i: 0 for i in range(env.action_space.n)}  # Track action usage
 
-    def choose_action(self, state):
-        # Simple strategy: build roads or settlements if possible, otherwise pass
-        resources = state[-10:-5]  # Assuming resources are the last 5 elements in the state
-        wood, brick, wheat, sheep, ore = resources
-
-        if wood > 0 and brick > 0:
-            return 0  # Build a road
-        if wood > 0 and brick > 0 and wheat > 0 and sheep > 0:
-            return 1  # Build a settlement
-
-        # If no valid moves, choose to pass the turn
-        if wood == 0 or brick == 0:
-            return 2  # Pass the turn
-
-        return random.choice([i for i in range(3, 23)])  # Trade with bank randomly
-
-def train_agent(env, agent, rule_based_agents, episodes):
     for e in range(episodes):
-        print("Starting new episode")
+        print(f"Starting episode {e + 1}/{episodes}")
         state = env.reset()
         done = False
         step_count = 0
+        total_reward = 0
+        episode_loss = 0  # Initialize loss for this episode
+
         while not done:
+            current_player = env.current_player
+            agent = agents[current_player]
             action = agent.act(state)
+            action_counts[action] += 1  # Track action usage
+
             next_state, reward, done, _ = env.step(action)
-            print(f"Step {step_count}: Action {action}, Reward: {reward}, Done: {done}")
+            total_reward += reward
+
             agent.remember(state, action, reward, next_state, done)
+            loss = agent.replay()  # Replay will return the loss
+            episode_loss += loss if loss is not None else 0  # Accumulate loss
+
             state = next_state
-            agent.replay()
             step_count += 1
 
-        print(f"Episode {e+1}/{episodes} completed after {step_count} steps. Final Epsilon: {agent.epsilon:.2f}")
+            if step_count > 10000:
+                print(f"Episode {e+1} exceeded 10,000 steps. Skipping...")
+                break  # Skip to the next episode if exceeding 10,000 steps
+
+        episode_rewards.append(total_reward)
+        episode_lengths.append(step_count)
+        episode_losses.append(episode_loss)  # Total loss for the episode
+
+        print(f"Episode {e+1}/{episodes} completed with total reward: {total_reward}, "
+              f"total loss: {episode_loss:.4f} after {step_count} steps. "
+              f"Final Epsilon: {agent.epsilon:.2f}")
+        
         if done:
             print("Game ended naturally, preparing for next episode.")
         
@@ -120,14 +134,52 @@ def train_agent(env, agent, rule_based_agents, episodes):
             agent.save(f"catan_agent_{e + 1}.pth")
             print(f"Agent model saved after {e + 1} episodes.")
 
+    return episode_rewards, episode_lengths, episode_losses, action_counts
+
 if __name__ == "__main__":
     env = CatanEnv()
     state_size = env.observation_space.shape[0]
     action_size = env.action_space.n
-    agent = CatanAgent(state_size, action_size)
-    rule_based_agents = [RuleBasedAgent() for _ in range(3)]  # Other players are rule-based
+    agents = [CatanAgent(state_size, action_size) for _ in range(env.num_players)]  # All players now using Q-learning
 
     # Train the agent
-    train_agent(env, agent, rule_based_agents, episodes=150)
-    agent.save("final_catan_agent.pth")
+    episode_rewards, episode_lengths, episode_losses, action_counts = train_agent(env, agents, episodes=10)
+    agents[0].save("final_catan_agent.pth")
     print("Final agent model saved.")
+
+    # Total reward per episode
+    plt.figure()
+    plt.plot(episode_rewards)
+    plt.xlabel('Episode')
+    plt.ylabel('Total Reward')
+    plt.title('Total Reward per Episode')
+    plt.savefig('results/total_reward_per_episode.png')
+    plt.close()
+
+    # Number of steps per episode
+    plt.figure()
+    plt.plot(episode_lengths)
+    plt.xlabel('Episode')
+    plt.ylabel('Steps per Episode')
+    plt.title('Steps per Episode')
+    plt.savefig('results/steps_per_episode.png')
+    plt.close()
+
+    # Total loss per episode
+    plt.figure()
+    plt.plot(episode_losses)
+    plt.xlabel('Episode')
+    plt.ylabel('Total Loss')
+    plt.title('Total Loss per Episode')
+    plt.savefig('results/total_loss_per_episode.png')
+    plt.close()
+
+    # Action distribution
+    actions, counts = zip(*action_counts.items())
+    plt.figure()
+    plt.bar(actions, counts)
+    plt.xlabel('Action')
+    plt.ylabel('Count')
+    plt.title('Action Frequency Distribution')
+    plt.savefig('results/action_frequency_distribution.png')
+    plt.close()
