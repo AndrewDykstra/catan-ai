@@ -102,6 +102,7 @@
 ## [1.0.6] - 2024-08-12
 ### Added
 - Rules around building a road and settlement in valid locations
+- Finding the best starting settlement placements
 
 ### Changed
 - N/A
